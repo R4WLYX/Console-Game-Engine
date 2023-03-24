@@ -67,6 +67,12 @@ game.ClearScreen(' ', FG_BLACK | BG_WHITE);
 ```
 The **`m_bShowFPS`** variable controls whether the frames per second (FPS) is displayed in the top-left corner of the screen.
 
+## Compiling
+You can compile a project by using:
+``` bash
+g++ -o output_file project_file dir/r4GameEngine.hpp
+```
+
 ## License
 This game engine is released under the MIT License.
 
