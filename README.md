@@ -5,7 +5,8 @@ A simple console game engine i made in c++
 You can compile your own project by running<br>
 ```PS> g++ -o output_file project_file game_engine_file```
 
-# Things I might add
-* Object class
-* Physics engine
-* Custom file for sprites
+# To-do list
+- [ ] Optimize Text Drawing
+- [ ] Objects
+- [ ] Sprites
+- [ ] Physics Engine
