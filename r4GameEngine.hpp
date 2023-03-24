@@ -1,71 +1,64 @@
 #ifndef _WIN32
 cerr << "This game engine is not supported in your OS.";
-while (true);
 #endif
 
 #include <windows.h>
 #include <iostream>
 #include <iterator>
 #include <fstream>
+#include <cstdlib>
 #include <chrono>
 #include <thread>
 #include <vector>
 #include <future>
+#include <cstdio>
 #include <cmath>
 #include <ios>
 
-enum COLOUR {
-	FG_BLACK		= 0x0000,
-	FG_DARK_BLUE    = 0x0001,	
-	FG_DARK_GREEN   = 0x0002,
-	FG_DARK_CYAN    = 0x0003,
-	FG_DARK_RED     = 0x0004,
-	FG_DARK_MAGENTA = 0x0005,
-	FG_DARK_YELLOW  = 0x0006,
-	FG_GREY			= 0x0007,
-	FG_DARK_GREY    = 0x0008,
-	FG_BLUE			= 0x0009,
-	FG_GREEN		= 0x000A,
-	FG_CYAN			= 0x000B,
-	FG_RED			= 0x000C,
-	FG_MAGENTA		= 0x000D,
-	FG_YELLOW		= 0x000E,
-	FG_WHITE		= 0x000F,
-	BG_BLACK		= 0x0000,
-	BG_DARK_BLUE	= 0x0010,
-	BG_DARK_GREEN	= 0x0020,
-	BG_DARK_CYAN	= 0x0030,
-	BG_DARK_RED		= 0x0040,
-	BG_DARK_MAGENTA = 0x0050,
-	BG_DARK_YELLOW	= 0x0060,
-	BG_GREY			= 0x0070,
-	BG_DARK_GREY	= 0x0080,
-	BG_BLUE			= 0x0090,
-	BG_GREEN		= 0x00A0,
-	BG_CYAN			= 0x00B0,
-	BG_RED			= 0x00C0,
-	BG_MAGENTA		= 0x00D0,
-	BG_YELLOW		= 0x00E0,
-	BG_WHITE		= 0x00F0,
-};
+#define FG_BLACK 0x0000
+#define FG_DARK_BLUE 0x0001
+#define FG_DARK_GREEN 0x0002
+#define FG_DARK_CYAN 0x0003
+#define FG_DARK_RED 0x0004
+#define FG_DARK_MAGENTA 0x0005
+#define FG_DARK_YELLOW 0x0006
+#define FG_GREY 0x0007
+#define FG_DARK_GREY 0x0008
+#define FG_BLUE 0x0009
+#define FG_GREEN 0x000A
+#define FG_CYAN 0x000B
+#define FG_RED 0x000C
+#define FG_MAGENTA 0x000D
+#define FG_YELLOW 0x000E
+#define FG_WHITE 0x000F
+#define BG_BLACK 0x0000
+#define BG_DARK_BLUE 0x0010
+#define BG_DARK_GREEN 0x0020
+#define BG_DARK_CYAN 0x0030
+#define BG_DARK_RED 0x0040
+#define BG_DARK_MAGENTA 0x0050
+#define BG_DARK_YELLOW 0x0060
+#define BG_GREY 0x0070
+#define BG_DARK_GREY 0x0080
+#define BG_BLUE 0x0090
+#define BG_GREEN 0x00A0
+#define BG_CYAN 0x00B0
+#define BG_RED 0x00C0
+#define BG_MAGENTA 0x00D0
+#define BG_YELLOW 0x00E0
+#define BG_WHITE 0x00F0
 
-enum Alignment {
-	ALIGN_LEFT   = 0,
-	ALIGN_CENTER = 1,
-	ALIGN_RIGHT  = 2
-};
+#define LEFT 0
+#define CENTER 1
+#define RIGHT 2
 
 struct Pixel {
-	int x, y;
-	char c;
-	short col;
+    int x, y;
+    char c;
+    short col;
 
-	Pixel(int x, int y, char c = '#', short col = 0x000F) {
-		this->x = x;
-		this->y = y;
-		this->c = c;
-		this->col = col;
-	}
+    Pixel(const int& x = 0, const int& y = 0, const char& c = '#', const short& col = 0x000F) :
+        x(x), y(y), c(c), col(col) {}
 };
 
 class r4GameEngine {
@@ -83,10 +76,10 @@ protected:
     bool m_bRunning;
 	bool m_bShowFPS;
     
-    virtual bool OnLoad() = 0;
-    virtual bool OnUpdate(double fElapsedTime) = 0;
+    virtual bool OnUserCreate() = 0;
+    virtual bool OnUserUpdate(double fElapsedTime) = 0;
 
-	void ClearScreen(char c = ' ', short col = 0x0000) {
+	void ClearScreen(const char& c = ' ', const short& col = 0x0000) {
 		for (int x = 0; x < m_nScreenWidth; x++) {
 			for (int y = 0; y < m_nScreenHeight; y++) {
 				m_bufScreen[y * m_nScreenWidth + x].Char.UnicodeChar = c;
@@ -95,7 +88,7 @@ protected:
 		}
 	}
 
-    void DrawPixel(Pixel pixel) {
+    void DrawPixel(const Pixel& pixel) {
 		if (pixel.x >= 0 && pixel.x < m_nScreenWidth && pixel.y >= 0 && pixel.y < m_nScreenHeight &&
 			m_bufScreen[pixel.y * m_nScreenWidth + pixel.x].Char.UnicodeChar != pixel.c &&
 			m_bufScreen[pixel.y * m_nScreenWidth + pixel.x].Attributes != pixel.col) {
@@ -104,48 +97,57 @@ protected:
 		}
     }
 
-	void DrawPixels(std::vector<Pixel> pixels) {
-		for (const Pixel& pixel : pixels) {
-			std::async(std::launch::async, DrawPixel, this, pixel);
-		}
+	void DrawPixels(const std::vector<Pixel>& pixels) {
+		#pragma omp parallel for
+    	for (int i = 0; i < pixels.size(); i++) {
+    	    DrawPixel(pixels[i]);
+    	}
     }
 
-	void DrawLine(std::pair<Pixel, Pixel> pair) {
+	void DrawLine(const std::pair<Pixel,Pixel>& pair) {
 		char c = pair.first.c;
 		short col = pair.first.col;
 		int x0 = pair.first.x, x1 = pair.second.x;
 		int y0 = pair.first.y, y1 = pair.second.y;
-		int dx = abs(x1 - x0);
-    	int sx = x0 < x1 ? 1 : -1;
-    	int dy = -abs(y1 - y0);
-    	int sy = y0 < y1 ? 1 : -1;
-    	int error = dx + dy;
-		int e2;
-	
-    	while (true) {
-    	    DrawPixel(Pixel(x0, y0, c, col));
-    	    if (x0 == x1 && y0 == y1) break;
-    	    e2 = 2 * error;
-    	    if (e2 >= dy) {
-    	        if (x0 == x1) break;
-    	        error += dy;
-    	        x0 += sx;
-			}
-    	    if (e2 <= dx) {
-    	        if (y0 == y1) break;
-    	        error += dx;
-    	        y0 += sy;
+		bool steep = abs(y1 - y0) > abs(x1 - x0);
+    	if (steep) {
+    	    std::swap(x0, y0);
+    	    std::swap(x1, y1);
+    	}
+    	if (x0 > x1) {
+    	    std::swap(x0, x1);
+    	    std::swap(y0, y1);
+    	}
+    	int dx = x1 - x0;
+    	int dy = abs(y1 - y0);
+    	float err = dx / 2.0f;
+    	int ystep = (y0 < y1) ? 1 : -1;
+    	int y = y0;
+		#pragma omp parallel for
+    	for (int x = x0; x <= x1; x++) {
+    	    if (steep) {
+    	        DrawPixel(Pixel(y, x, c, col));
     	    }
-		}
+    	    else {
+    	        DrawPixel(Pixel(x, y, c, col));
+    	    }
+    	    err -= dy;
+    	    if (err < 0) {
+    	        y += ystep;
+    	        err += dx;
+    	    }
+    	}
 	}
 
-	void DrawLines(std::vector<std::pair<Pixel, Pixel>> pairs) {
-		for (const std::pair<Pixel, Pixel>& pair : pairs) {
-			std::async(std::launch::async, DrawLine, this, pair);
-		}
+	void DrawLines(const std::vector<std::pair<Pixel,Pixel>>& pairs) {
+		#pragma omp parallel for
+    	for (int i = 0; i < pairs.size(); i++) {
+    	    DrawLine(pairs[i]);
+    	}
 	}
 
-	void DrawText(int x, int y, std::string str, int alignment = 0, short col = 0x000F) {
+	void DrawText(const int& x, const int& y, const std::string& str, const int& alignment = 0, const short& col = 0x000F) {
+		#pragma omp parallel for
 		for (size_t i = 0; i < str.length(); i++) {
 			int coord = int(y * m_nScreenWidth + x + (alignment != 2? i : -i) - str.length()/2*(alignment%2));
 			int index = alignment != 2? i : str.length()-1 - i;
@@ -154,9 +156,10 @@ protected:
 		}
 	}
 
-	void DrawTexts(int x, int y, std::vector<std::string> strVec, int alignment = 0, short col = 0x000F) {
+	void DrawTexts(const int& x, const int& y, const std::vector<std::string>& strVec, const int& alignment = 0, const short& col = 0x000F) {
+		#pragma omp parallel for
 		for (int i = 0; i < strVec.size(); i++) {
-			std::async(std::launch::async, DrawText, this, x, y+i, strVec[i], alignment, col);
+			DrawText(x, y+i, strVec[i], alignment, col);
 		}
 	}
 
@@ -166,7 +169,7 @@ public:
 		m_hConsoleIn = GetStdHandle(STD_INPUT_HANDLE);
     }
 
-    int ConstructConsole(int width, int height, int fontw, int fonth, bool showFPS = false) {
+    int ConstructConsole(const int& width, const int& height, const int& fontw, const int& fonth, const bool& showFPS = false) {
 		m_nScreenWidth = width;
 		m_nScreenHeight = height;
 
@@ -219,7 +222,7 @@ private:
 
 		SetConsoleTitleW(L"R4WLYX Game Engine");
 
-        if (!OnLoad()) m_bRunning = false;
+        if (!OnUserCreate()) m_bRunning = false;
 
         while(m_bRunning) {
             T1 = std::chrono::system_clock::now();
@@ -227,7 +230,7 @@ private:
             T0 = T1;
             double fElapsedTime = elapsedTime.count();
 
-            if(!OnUpdate(fElapsedTime)) m_bRunning = false;
+            if(!OnUserUpdate(fElapsedTime)) m_bRunning = false;
 
             wchar_t s[256];
 			if (!m_bShowFPS)
