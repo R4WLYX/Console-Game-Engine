@@ -68,7 +68,6 @@ protected:
 	CHAR_INFO* m_bufScreen;
 	std::wstring m_sAppName;
 	HANDLE m_hOriginalConsole;
-	CONSOLE_SCREEN_BUFFER_INFO m_OriginalConsoleInfo;
 	HANDLE m_hConsole;
 	HANDLE m_hConsoleIn;
 	SMALL_RECT m_rectWindow;
