@@ -33,6 +33,19 @@ The **`ConstructConsole()`** method initializes the console window with the give
 The Pixel struct represents a single pixel on the screen. You can draw pixels, lines, and shapes by calling the **`DrawPixel()`**, **`DrawLine()`**, and **`DrawPixels()`** methods, respectively.
 
 ``` c++
+struct Pixel {
+    int x, y;
+    char c;
+    short col;
+
+    Pixel(const int& x = 0, const int& y = 0, const char& c = '#', const short& col = 0x000F) :
+        x(x), y(y), c(c), col(col) {}
+};
+```
+
+Usage of the Pixel struct with **`DrawPixel()`**, **`DrawLine()`**, and **`DrawPixels()`** methods.
+
+``` c++
 Pixel p(10, 10, '#', FG_RED | BG_GREEN);
 game.DrawPixel(p);
 
