@@ -5,6 +5,7 @@ cerr << "This game engine is not supported in your OS.";
 #include <windows.h>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <fstream>
 #include <cstdlib>
 #include <chrono>
@@ -60,6 +61,60 @@ struct Pixel {
         x(x), y(y), c(c), col(col) {}
 };
 
+class Sprite {
+public:
+	int nWidth, nHeight;
+
+private:
+	char* m_Glyphs = nullptr;
+	short* m_Colours = nullptr;
+
+	void Create(const int& width, const int& height) {
+		nWidth = width;
+		nHeight = height;
+		m_Glyphs = new char[width*height]{' '};
+		m_Colours = new short[width*height]{FG_BLACK};
+	}
+
+public:
+	void Save(const std::wstring& File) {
+		FILE* f = nullptr;
+		_wfopen_s(&f, File.c_str(), L"wb");
+		if (f == nullptr)
+			std::cerr << "Incorrect File.";
+
+		std::fwrite(&nWidth, sizeof(int), 1, f);
+		std::fwrite(&nHeight, sizeof(int), 1, f);
+		std::fwrite(m_Glyphs, sizeof(char), nWidth*nHeight, f);
+		std::fwrite(m_Colours, sizeof(short), nWidth*nHeight, f);
+
+		std::fclose(f);
+	}
+
+	void Load(const std::wstring& File) {
+		delete[] m_Glyphs;
+		delete[] m_Colours;
+		nWidth = 0;
+		nHeight = 0;
+
+		FILE* f = nullptr;
+		_wfopen_s(&f, File.c_str(), L"rb");
+		if (f == nullptr)
+			std::cerr << "Incorrect File.";
+		
+		std::fread(&nWidth, sizeof(int), 1, f);
+		std::fread(&nHeight, sizeof(int), 1, f);
+
+		Create(nWidth, nHeight);
+
+		std::fread(m_Glyphs, sizeof(char), nWidth*nHeight, f);
+		std::fread(m_Colours, sizeof(short), nWidth*nHeight, f);
+
+		std::fclose(f);
+		delete[] f;
+	}
+};
+
 class r4GameEngine {
 protected:
 	int m_nScreenWidth;
@@ -78,7 +133,9 @@ protected:
     virtual bool OnUserUpdate(double fElapsedTime) = 0;
 
 	void ClearScreen(const char& c = ' ', const short& col = 0x0000) {
+		#pragma omp parallel for
 		for (int x = 0; x < m_nScreenWidth; x++) {
+			#pragma omp parallel for
 			for (int y = 0; y < m_nScreenHeight; y++) {
 				m_bufScreen[y * m_nScreenWidth + x].Char.UnicodeChar = c;
 				m_bufScreen[y * m_nScreenWidth + x].Attributes = col;
@@ -182,8 +239,8 @@ public:
         CONSOLE_FONT_INFOEX cfi;
         cfi.cbSize = sizeof(cfi);
         cfi.nFont = 0;
-        cfi.dwFontSize.X = fontw;
-        cfi.dwFontSize.Y = fonth;
+        cfi.dwFontSize.X = fontw < 2? 2 : fontw;
+        cfi.dwFontSize.Y = fonth < 2? 2 : fonth;
         cfi.FontFamily = FF_DONTCARE;
         cfi.FontWeight = FW_NORMAL;
 
@@ -217,26 +274,38 @@ private:
     void GameThread() {
         auto T0 = std::chrono::system_clock::now();
         auto T1 = std::chrono::system_clock::now();
+		double fElapsedTime;
 
 		SetConsoleTitleW(L"R4WLYX Game Engine");
 
         if (!OnUserCreate()) m_bRunning = false;
 
-        while(m_bRunning) {
-            T1 = std::chrono::system_clock::now();
-            std::chrono::duration<double> elapsedTime = T1 - T0;
-            T0 = T1;
-            double fElapsedTime = elapsedTime.count();
+		wchar_t s[256];
+		m_sAppName.copy(s, m_sAppName.length());
 
-            if(!OnUserUpdate(fElapsedTime)) m_bRunning = false;
+		if (m_bShowFPS)
+		    wcscat_s(s, L" - FPS: ");
 
-            wchar_t s[256];
-			if (!m_bShowFPS)
-				swprintf_s(s, 256, L"%s", m_sAppName.c_str());
-			else
-				swprintf_s(s, 256, L"%s - FPS:%8.2f", m_sAppName.c_str(), float(1.0f/fElapsedTime));
-			SetConsoleTitleW(s);
-			WriteConsoleOutput(m_hConsole, m_bufScreen.get(), {(short)m_nScreenWidth, (short)m_nScreenHeight}, {0, 0}, &m_rectWindow);
-        }
+		size_t FPSloc = wcslen(s)-1;
+
+		while (m_bRunning) {
+		    T1 = std::chrono::system_clock::now();
+		    std::chrono::duration<double> elapsedTime = T1 - T0;
+		    T0 = T1;
+		    fElapsedTime = elapsedTime.count();
+
+		    if (!OnUserUpdate(fElapsedTime)) m_bRunning = false;
+
+			if (m_bShowFPS) {
+				if (fElapsedTime <= 0) {
+					swprintf_s(s + FPSloc, 256 - FPSloc, L" NaN");
+					goto setTitle;
+				}
+				swprintf_s(s + FPSloc, 256 - FPSloc, L" %3.2f", 1.0f / fElapsedTime);
+			}
+
+		    setTitle: SetConsoleTitleW(s);
+		    WriteConsoleOutput(m_hConsole, m_bufScreen.get(), { (short)m_nScreenWidth, (short)m_nScreenHeight }, { 0, 0 }, &m_rectWindow);
+		}
     }
 };
