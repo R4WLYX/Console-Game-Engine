@@ -47,7 +47,6 @@ cerr << "This game engine is not supported in your OS.";
 #define BG_MAGENTA 0x00D0
 #define BG_YELLOW 0x00E0
 #define BG_WHITE 0x00F0
-
 #define LEFT 0
 #define CENTER 1
 #define RIGHT 2
@@ -65,7 +64,7 @@ class r4GameEngine {
 protected:
 	int m_nScreenWidth;
 	int m_nScreenHeight;
-	CHAR_INFO* m_bufScreen;
+	std::unique_ptr<CHAR_INFO[]> m_bufScreen;
 	std::wstring m_sAppName;
 	HANDLE m_hOriginalConsole;
 	HANDLE m_hConsole;
@@ -196,8 +195,8 @@ public:
 
 		SetConsoleMode(m_hConsoleIn, ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT);
 
-        m_bufScreen = new CHAR_INFO[m_nScreenWidth*m_nScreenHeight];
-		memset(m_bufScreen, 0, sizeof(CHAR_INFO) * m_nScreenWidth*m_nScreenHeight);
+        m_bufScreen.reset(new CHAR_INFO[m_nScreenWidth * m_nScreenHeight]);
+		memset(m_bufScreen.get(), 0, sizeof(CHAR_INFO) * m_nScreenWidth*m_nScreenHeight);
 
 		m_bShowFPS = showFPS;
 
@@ -237,7 +236,7 @@ private:
 			else
 				swprintf_s(s, 256, L"%s - FPS:%8.2f", m_sAppName.c_str(), float(1.0f/fElapsedTime));
 			SetConsoleTitleW(s);
-			WriteConsoleOutput(m_hConsole, m_bufScreen, {(short)m_nScreenWidth, (short)m_nScreenHeight}, {0, 0}, &m_rectWindow);
+			WriteConsoleOutput(m_hConsole, m_bufScreen.get(), {(short)m_nScreenWidth, (short)m_nScreenHeight}, {0, 0}, &m_rectWindow);
         }
     }
 };
