@@ -13,8 +13,8 @@ class Game : public r4GameEngine {
         fBallVelX, fBallVelY;
     const float
         fPaddleSize = 16.0f,
-        fPaddleVel = 50.0f,
-        fBallVel = 22.0f;
+        fPaddleVel = 32.0f,
+        fBallVel = 50.0f;
 
     bool OnUserCreate() {
         // Code ran when loaded
@@ -36,15 +36,15 @@ class Game : public r4GameEngine {
         fPaddle1Y = ScreenHeight() / 2.0f;
 
         // Sets ball's initial position
-        fBallX = ScreenWidth() / 3.0f;
+        fBallX = ScreenWidth() / 2.0f;
         fBallY = ScreenHeight() / 2.0f;
 
         // Sets ball's initial angle
-        fBallA = rand()%91 - 45;
+        fBallA = rand()%20 - 10 + 90;
 
         // Sets ball's initial velocity
-        fBallVelX = cosf(fBallA * M_PI / 180)*fPaddleVel;
-        fBallVelY = sinf(fBallA * M_PI / 180)*fPaddleVel;
+        fBallVelX = sinf(fBallA * M_PI / 180)*fBallVel;
+        fBallVelY = cosf(fBallA * M_PI / 180)*fBallVel;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         return true;
@@ -59,30 +59,38 @@ class Game : public r4GameEngine {
         ClearScreen();
 
         // Render everything
-        // Draw border
+        // Draw pong!
+        DrawTexts(ScreenWidth()/2, ScreenHeight()/2-6, {
+            ":::::::::     ::::::::    ::::    :::    ::::::::    :::",
+            ":::::::::     ::::::::    ::::    :::    ::::::::    :::",
+            ":+:    :+:   :+:    :+:   :+:+:   :+:   :+:    :+:   :+:",
+            ":+:    :+:   :+:    :+:   :+:+:   :+:   :+:    :+:   :+:",
+            "+:+    +:+   +:+    +:+   :+:+:+  +:+   +:+          +:+",
+            "+:+    +:+   +:+    +:+   :+:+:+  +:+   +:+          +:+",
+            "+#++:++#+    +#+    +:+   +#+ +:+ +#+   :#:          +#+",
+            "+#++:++#+    +#+    +:+   +#+ +:+ +#+   :#:          +#+",
+            "+#+          +#+    +#+   +#+  +#+#+#   +#+   +#+#   +#+",
+            "+#+          +#+    +#+   +#+  +#+#+#   +#+   +#+#   +#+",
+            "#+#          #+#    #+#   #+#   #+#+#   #+#    #+#      ",
+            "#+#          #+#    #+#   #+#   #+#+#   #+#    #+#      ",
+            "###           ########    ###    ####    ########    ###",
+            "###           ########    ###    ####    ########    ###"
+        }, CENTER, FG_DARK_GREY);
+
+        // Draw border and paddles
         DrawLines({
             {Pixel(0, 0, '*'), Pixel(ScreenWidth()-1, 0)},
             {Pixel(ScreenWidth()-1, 0, '*'), Pixel(ScreenWidth()-1, ScreenHeight()-1)},
             {Pixel(ScreenWidth()-1, ScreenHeight()-1, '*'), Pixel(0, ScreenHeight()-1)},
-            {Pixel(0, ScreenHeight()-1, '*'), Pixel(0, 0)}
-        });
-
-        // Draw paddle 0
-        DrawLines({
+            {Pixel(0, ScreenHeight()-1, '*'), Pixel(0, 0)},
             {Pixel(fPaddle0X, fPaddle0Y - fPaddleSize/2, '#', FG_RED), Pixel(fPaddle0X, fPaddle0Y + fPaddleSize/2)},
-            {Pixel(fPaddle0X-1, fPaddle0Y - fPaddleSize/2, '%', FG_RED), Pixel(fPaddle0X-1, fPaddle0Y + fPaddleSize/2)}
-        });
-        
-        // Draw paddle 1
-        DrawLines({
+            {Pixel(fPaddle0X-1, fPaddle0Y - fPaddleSize/2, '%', FG_RED), Pixel(fPaddle0X-1, fPaddle0Y + fPaddleSize/2)},
             {Pixel(fPaddle1X, fPaddle1Y - fPaddleSize/2, '#', FG_BLUE), Pixel(fPaddle1X, fPaddle1Y + fPaddleSize/2)},
             {Pixel(fPaddle1X+1, fPaddle1Y - fPaddleSize/2, '%', FG_BLUE), Pixel(fPaddle1X+1, fPaddle1Y + fPaddleSize/2)}
         });
 
         // Draw ball
-        DrawPixel(
-            Pixel(fBallX, fBallY, '@')
-        );
+        DrawPixel(Pixel(fBallX, fBallY, '@'));
 
         // Display score
         DrawText(ScreenWidth()/4, 10, std::to_string(nScore0), CENTER);
@@ -119,12 +127,10 @@ class Game : public r4GameEngine {
 
         // Check if ball hits top or bottom
         if (fBallY <= 1) {
-            fBallA = -fBallA + rand()%30 - 15;
-            fBallVelY = sinf(fBallA * M_PI / 180)*fPaddleVel;
+            fBallVelY = -fBallVelY;
             fBallY = 2;
         } else if (fBallY >= ScreenHeight()-2) {
-            fBallA = -fBallA + rand()%30 - 15;
-            fBallVelY = sinf(fBallA * M_PI / 180)*fPaddleVel;
+            fBallVelY = -fBallVelY;
             fBallY = ScreenHeight()-3;
         }
 
@@ -132,7 +138,7 @@ class Game : public r4GameEngine {
         if (fBallX <= fPaddle0X &&
             fBallX >= fPaddle0X-2.0f &&
             fBallY < fPaddle0Y + fPaddleSize/2.0f &&
-            fBallY > fPaddle0Y - fPaddleSize/2.0f) {
+            fBallY > fPaddle0Y - fPaddleSize/2.0f) { 
             fBallVelX = -fBallVelX;
             fBallX = fPaddle0X+1;
         } else if (fBallX >= fPaddle1X &&
@@ -149,9 +155,9 @@ class Game : public r4GameEngine {
             fPaddle1Y = ScreenHeight() / 2.0f;
             fBallX = ScreenWidth() / 2.0f;
             fBallY = ScreenHeight() / 2.0f;
-            fBallA = rand()%90 - 45;
-            fBallVelX = cosf(fBallA * M_PI / 180)*fPaddleVel;
-            fBallVelY = sinf(fBallA * M_PI / 180)*fPaddleVel;
+            fBallA = rand()%20 - 10 + 90;
+            fBallVelX = sinf(fBallA * M_PI / 180)*fBallVel;
+            fBallVelY = cosf(fBallA * M_PI / 180)*fBallVel;
             nScore1++;
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         } else if (fBallX >= ScreenWidth()-1) {
@@ -159,9 +165,9 @@ class Game : public r4GameEngine {
             fPaddle1Y = ScreenHeight() / 2.0f;
             fBallX = ScreenWidth() / 2.0f;
             fBallY = ScreenHeight() / 2.0f;
-            fBallA = rand()%270 - 45;
-            fBallVelX = cosf(fBallA * M_PI / 180)*fPaddleVel;
-            fBallVelY = sinf(fBallA * M_PI / 180)*fPaddleVel;
+            fBallA = rand()%20 - 10 + 270;
+            fBallVelX = sinf(fBallA * M_PI / 180)*fBallVel;
+            fBallVelY = cosf(fBallA * M_PI / 180)*fBallVel;
             nScore0++;
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
